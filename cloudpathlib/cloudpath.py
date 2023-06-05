@@ -99,10 +99,12 @@ class CloudImplementation:
 implementation_registry: Dict[str, CloudImplementation] = defaultdict(CloudImplementation)
 
 
-def register_path_class(key: str) -> Callable:
-    T = TypeVar("T", bound=Type[CloudPath])
+T = TypeVar("T")
+CloudPathT = TypeVar("CloudPathT", bound="CloudPath")
 
-    def decorator(cls: Type[T]) -> Type[T]:
+
+def register_path_class(key: str) -> Callable[[Type[CloudPathT]], Type[CloudPathT]]:
+    def decorator(cls: Type[CloudPathT]) -> Type[CloudPathT]:
         if not issubclass(cls, CloudPath):
             raise TypeError("Only subclasses of CloudPath can be registered.")
         implementation_registry[key]._path_class = cls
@@ -113,34 +115,47 @@ def register_path_class(key: str) -> Callable:
 
 
 class CloudPathMeta(abc.ABCMeta):
-    def __call__(cls, cloud_path, *args, **kwargs):
+    @overload
+    def __call__(cls: Type[T], cloud_path: CloudPathT, *args: Any, **kwargs: Any) -> CloudPathT:
+        ...
+
+    @overload
+    def __call__(
+        cls: Type[T], cloud_path: Union[str, "CloudPath"], *args: Any, **kwargs: Any
+    ) -> T:
+        ...
+
+    def __call__(
+        cls: Type[T], cloud_path: Union[str, CloudPathT], *args: Any, **kwargs: Any
+    ) -> Union[T, "CloudPath", CloudPathT]:
         # cls is a class that is the instance of this metaclass, e.g., CloudPath
+        if not issubclass(cls, CloudPath):
+            raise TypeError(
+                f"Only subclasses of {CloudPath.__name__} can be instantiated from its meta class."
+            )
 
         # Dispatch to subclass if base CloudPath
-        if cls == CloudPath:
+        if cls is CloudPath:
             for implementation in implementation_registry.values():
                 path_class = implementation._path_class
                 if path_class is not None and path_class.is_valid_cloudpath(
                     cloud_path, raise_on_error=False
                 ):
                     # Instantiate path_class instance
-                    new_obj = path_class.__new__(path_class, cloud_path, *args, **kwargs)
-                    if isinstance(new_obj, path_class):
-                        path_class.__init__(new_obj, cloud_path, *args, **kwargs)
+                    new_obj = object.__new__(path_class)
+                    path_class.__init__(new_obj, cloud_path, *args, **kwargs)  # type: ignore[type-var]
                     return new_obj
-            valid = [
+            valid_prefixes = [
                 impl._path_class.cloud_prefix
                 for impl in implementation_registry.values()
                 if impl._path_class is not None
             ]
             raise InvalidPrefixError(
-                f"Path {cloud_path} does not begin with a known prefix {valid}."
+                f"Path {cloud_path} does not begin with a known prefix {valid_prefixes}."
             )
 
-        # Otherwise instantiate as normal
-        new_obj = cls.__new__(cls, cloud_path, *args, **kwargs)
-        if isinstance(new_obj, cls):
-            cls.__init__(new_obj, cloud_path, *args, **kwargs)
+        new_obj = object.__new__(cls)
+        cls.__init__(new_obj, cloud_path, *args, **kwargs)  # type: ignore[type-var]
         return new_obj
 
     def __init__(cls, name: str, bases: Tuple[type, ...], dic: Dict[str, Any]) -> None:
@@ -219,7 +234,7 @@ class CloudPath(metaclass=CloudPathMeta):
         # ensure file removed from cache when cloudpath object deleted
         if (
             hasattr(self, "client")
-            and self.client.file_cache_mode == FileCacheMode.cloudpath_object
+            #and self.client.file_cache_mode == FileCacheMode.cloudpath_object
         ):
             self.clear_cache()
 
@@ -443,15 +458,15 @@ class CloudPath(metaclass=CloudPathMeta):
 
     def open(
         self,
-            mode="r",
-            buffering=-1,
-            encoding=None,
-            errors=None,
-            newline=None,
-            closefd=True,
-            opener=None,
-            ignore_ext=False,
-            compression=None,
+            mode: str ="r",
+            buffering: int = -1,
+            encoding: Optional[str] = None,
+            errors: Optional[str] = None,
+            newline: Optional[str] = None,
+            closefd: Optional[bool] = True,
+            opener = None,
+            ignore_ext = False,
+            compression = None,
             api_kwargs: dict = None, # type: ignore
         ):
         """
