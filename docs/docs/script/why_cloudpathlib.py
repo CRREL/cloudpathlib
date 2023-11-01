@@ -105,7 +105,7 @@ s3p.exists()
 
 from cloudpathlib import AzureBlobPath
 
-azp = AzureBlobPath("azure://cloudpathlib-test-container/file.txt")
+azp = AzureBlobPath("az://cloudpathlib-test-container/file.txt")
 azp.name
 
 
@@ -149,7 +149,7 @@ assert not upload.exists()
 from cloudpathlib import CloudPath
 
 # Changing this root path is the ONLY change!
-cloud_directory = CloudPath("azure://cloudpathlib-test-container/why_cloudpathlib/")
+cloud_directory = CloudPath("az://cloudpathlib-test-container/why_cloudpathlib/")
 
 upload = cloud_directory / "user_upload.txt"
 upload.write_text("A user made this file!")
