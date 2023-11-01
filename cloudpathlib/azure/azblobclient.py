@@ -169,7 +169,7 @@ class AzureBlobClient(Client):
                 )
 
             yield from (
-                (self.CloudPath(f"az://{c.name}"), True)
+                (self.CloudPath(f"azure://{c.name}"), True)
                 for c in self.service_client.list_containers()
             )
             return
@@ -194,7 +194,7 @@ class AzureBlobClient(Client):
                         continue
 
                     yield (
-                        self.CloudPath(f"az://{cloud_path.container}/{prefix}{parent}"),
+                        self.CloudPath(f"azure://{cloud_path.container}/{prefix}{parent}"),
                         True,  # is a directory
                     )
                     yielded_dirs.add(parent)
@@ -203,7 +203,7 @@ class AzureBlobClient(Client):
             if not recursive and "/" in o.name[len(prefix) :]:
                 continue
 
-            yield (self.CloudPath(f"az://{cloud_path.container}/{o.name}"), False)  # is a file
+            yield (self.CloudPath(f"azure://{cloud_path.container}/{o.name}"), False)  # is a file
 
     def _move_file(
         self, src: AzureBlobPath, dst: AzureBlobPath, remove_src: bool = True

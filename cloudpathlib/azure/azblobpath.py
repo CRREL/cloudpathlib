@@ -30,7 +30,7 @@ class AzureBlobPath(CloudPath):
     is used. See `AzureBlobClient`'s documentation for more details.
     """
 
-    cloud_prefix: str = "az://"
+    cloud_prefix: str = "azure://"
     client: "AzureBlobClient"
 
     @property

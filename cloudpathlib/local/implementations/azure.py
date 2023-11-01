@@ -42,7 +42,7 @@ class LocalAzureBlobPath(LocalPath):
     substitute when writing tests.
     """
 
-    cloud_prefix: str = "az://"
+    cloud_prefix: str = "azure://"
     _cloud_meta = local_azure_blob_implementation
 
     @property

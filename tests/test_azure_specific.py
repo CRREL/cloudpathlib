@@ -12,11 +12,11 @@ def test_azureblobpath_properties(path_class, monkeypatch):
     if not os.getenv("AZURE_STORAGE_CONNECTION_STRING"):
         monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "AccountName=fake;AccountKey=fake2;")
 
-    p = path_class("az://mycontainer")
+    p = path_class("azure://mycontainer")
     assert p.blob == ""
     assert p.container == "mycontainer"
 
-    p2 = path_class("az://mycontainer/")
+    p2 = path_class("azure://mycontainer/")
     assert p2.blob == ""
     assert p2.container == "mycontainer"
 

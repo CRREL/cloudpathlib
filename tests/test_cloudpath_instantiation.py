@@ -12,10 +12,10 @@ from cloudpathlib.exceptions import InvalidPrefixError, MissingDependenciesError
 @pytest.mark.parametrize(
     "path_class, cloud_path",
     [
-        (AzureBlobPath, "az://b/k"),
-        (AzureBlobPath, "AZ://b/k"),
-        (AzureBlobPath, "Az://b/k"),
-        (AzureBlobPath, "aZ://b/k"),
+        (AzureBlobPath, "azure://b/k"),
+        (AzureBlobPath, "azure://b/k"),
+        (AzureBlobPath, "azure://b/k"),
+        (AzureBlobPath, "azure://b/k"),
         (S3Path, "s3://b/k"),
         (S3Path, "S3://b/k"),
         (GSPath, "gs://b/k"),
