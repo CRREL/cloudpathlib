@@ -559,7 +559,7 @@ class CloudPath(metaclass=CloudPathMeta):
             newline=newline,
             closefd=closefd,
             opener=opener,
-            transport_params={"client": self.client},  # type: ignore
+            transport_params={"client": self.client.client},  # type: ignore
         )
         return smart_open.open(**kwargs)
 
