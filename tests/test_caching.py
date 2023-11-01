@@ -1,5 +1,6 @@
 import os
 from time import sleep
+from pathlib import Path
 
 import pytest
 
@@ -177,6 +178,8 @@ def test_persistent_mode(rig: CloudProviderTestRig, tmpdir):
 
 
 def test_interaction_with_local_cache_dir(rig: CloudProviderTestRig, tmpdir):
+    default_sleep = 0.5  # sometimes GH runners are slow and fail saying dir doesn't exist
+
     # cannot instantiate persistent without local file dir
     with pytest.raises(InvalidConfigurationException):
         client = rig.client_class(
@@ -198,6 +201,7 @@ def test_interaction_with_local_cache_dir(rig: CloudProviderTestRig, tmpdir):
 
     # download from cloud into the cache
     # must use open for close_file mode
+    sleep(default_sleep)
     with cp.open("r") as f:
         _ = f.read()
 
@@ -213,6 +217,7 @@ def test_interaction_with_local_cache_dir(rig: CloudProviderTestRig, tmpdir):
     assert cp.client.file_cache_mode == FileCacheMode.cloudpath_object
 
     # download from cloud into the cache
+    sleep(default_sleep)  # test can be flaky saying that the cache dir doesn't exist yet
     with cp.open("r") as f:
         _ = f.read()
 
@@ -231,6 +236,7 @@ def test_interaction_with_local_cache_dir(rig: CloudProviderTestRig, tmpdir):
     assert cp.client.file_cache_mode == FileCacheMode.tmp_dir
 
     # download from cloud into the cache
+    sleep(default_sleep)  # test can be flaky saying that the cache dir doesn't exist yet
     with cp.open("r") as f:
         _ = f.read()
 
@@ -276,6 +282,28 @@ def test_environment_variable_instantiation(rig: CloudProviderTestRig, tmpdir):
 
     finally:
         os.environ["CLOUPATHLIB_FILE_CACHE_MODE"] = original_env_setting
+
+
+def test_environment_variable_local_cache_dir(rig: CloudProviderTestRig, tmpdir):
+    # environment instantiation
+    original_env_setting = os.environ.get("CLOUDPATHLIB_LOCAL_CACHE_DIR", "")
+
+    try:
+        os.environ["CLOUDPATHLIB_LOCAL_CACHE_DIR"] = tmpdir.strpath
+        client = rig.client_class(**rig.required_client_kwargs)
+        assert client._local_cache_dir == Path(tmpdir.strpath)
+
+        cp = rig.create_cloud_path("dir_0/file0_0.txt", client=client)
+        cp.fspath  # download from cloud into the cache
+        assert (tmpdir / cp._no_prefix).exists()
+
+        # "" treated as None; falls back to temp dir for cache
+        os.environ["CLOUDPATHLIB_LOCAL_CACHE_DIR"] = ""
+        client = rig.client_class(**rig.required_client_kwargs)
+        assert client._cache_tmp_dir is not None
+
+    finally:
+        os.environ["CLOUDPATHLIB_LOCAL_CACHE_DIR"] = original_env_setting
 
 
 def test_manual_cache_clearing(rig: CloudProviderTestRig):
