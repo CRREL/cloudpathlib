@@ -532,24 +532,24 @@ class CloudPath(metaclass=CloudPathMeta):
 
     def open(
         self,
-            mode: str = "r",
-            buffering: int = -1,
-            encoding: Optional[str] = None,
-            errors: Optional[str] = None,
-            newline: Optional[str] = None,
-            force_overwrite_from_cloud: bool = False,  # extra kwarg not in pathlib
-            force_overwrite_to_cloud: bool = False,  # extra kwarg not in pathlib
-            closefd=True,
-            opener=None,
-            ignore_ext=False,
-            compression=None,
-            api_kwargs: dict = None, # type: ignore
-        ):
+        mode: str = "r",
+        buffering: int = -1,
+        encoding: Optional[str] = None,
+        errors: Optional[str] = None,
+        newline: Optional[str] = None,
+        force_overwrite_from_cloud: bool = False,  # extra kwarg not in pathlib
+        force_overwrite_to_cloud: bool = False,  # extra kwarg not in pathlib
+        closefd=True,
+        opener=None,
+        ignore_ext=False,
+        compression=None,
+        api_kwargs: dict = None,  # type: ignore
+    ):
         """
-            Open S3Path as a file-liked object.
-            :return: a file-like object.
-            See https://github.com/RaRe-Technologies/smart_open for more info.
-            """
+        Open S3Path as a file-liked object.
+        :return: a file-like object.
+        See https://github.com/RaRe-Technologies/smart_open for more info.
+        """
         kwargs = dict(
             uri=self.as_uri(),
             mode=mode,
@@ -559,10 +559,10 @@ class CloudPath(metaclass=CloudPathMeta):
             newline=newline,
             closefd=closefd,
             opener=opener,
-            transport_params={"client": self.client.client}
+            transport_params={"client": self.client.client},
         )
         return smart_open.open(**kwargs)
-    
+
     def read_text(
         self,
         encoding="utf-8",
@@ -572,11 +572,12 @@ class CloudPath(metaclass=CloudPathMeta):
             mode="r",
             encoding=encoding,
             errors=errors,
-
         ) as f:
             return f.read()
 
-    def read_bytes(self, ) -> bytes:
+    def read_bytes(
+        self,
+    ) -> bytes:
         with self.open(mode="rb") as f:
             return f.read()
 
@@ -586,7 +587,6 @@ class CloudPath(metaclass=CloudPathMeta):
         encoding="utf-8",
         errors=None,
         newline=None,
-
     ):
         with self.open(
             mode="w",
