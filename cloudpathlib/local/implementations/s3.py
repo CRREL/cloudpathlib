@@ -14,8 +14,6 @@ class LocalS3Client(LocalClient):
 
     _cloud_meta = local_s3_implementation
 
-    def clear_metadata_cache(self):
-        pass
 
 LocalS3Client.S3Path = LocalS3Client.CloudPath  # type: ignore
 

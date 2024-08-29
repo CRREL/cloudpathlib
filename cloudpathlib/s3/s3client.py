@@ -30,13 +30,6 @@ try:
 except ModuleNotFoundError:
     implementation_registry["s3"].dependencies_loaded = False
 
-@dataclasses.dataclass
-class PathMetadata:
-    is_file_or_dir: Optional[str]
-    etag: Optional[str]
-    size: Optional[int]
-    last_modified: Optional[str]
-
 
 @register_client_class("s3")
 class S3Client(Client):
@@ -146,8 +139,6 @@ class S3Client(Client):
             if k in self._extra_args
         }
         
-        self._metadata_cache: MutableMapping[S3Path, PathMetadata] = WeakKeyDictionary()
-
         super().__init__(
             local_cache_dir=local_cache_dir,
             content_type_method=content_type_method,
@@ -155,16 +146,10 @@ class S3Client(Client):
         )
 
     def _get_metadata(self, cloud_path: S3Path) -> Dict[str, Any]:
-        # get accepts all download extra args
-        size = None if not self._metadata_cache.get(cloud_path) else self._metadata_cache[cloud_path].size
-        if size:
-            return {
-                "last_modified": self._metadata_cache[cloud_path].last_modified,
-                "size": size,
-                "etag": self._metadata_cache[cloud_path].etag,
-                "content_type": None,
-                "extra": None,
-            } 
+
+        data = retrieve_cached_data(str(cloud_path))
+        if data:
+            return data.as_dict()
         else:
             data = self.s3.ObjectSummary(cloud_path.bucket, cloud_path.key).get(
                 **self.boto3_dl_extra_args
@@ -400,20 +385,64 @@ class S3Client(Client):
     
     def _set_metadata_cache(self, cloud_path: S3Path, is_file_or_dir: Optional[str], 
                             etag: Optional[str], size: Optional[int], lastmodified: Optional[str]) -> None:
+
+        cache_data(str(cloud_path), is_file_or_dir, lastmodified, size, etag)
         if is_file_or_dir is None:
-            self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir,
-                etag=etag, size=size, last_modified=lastmodified)
             # If a file/dir is now known to not exist, its parent directories may no longer exist
             # either, since cloud directories only exist if they have a file in them. Since their
             # state is no longer known we remove them from the cache.
             for parent in cloud_path.parents:
-                if parent in self._metadata_cache:
-                    del self._metadata_cache[parent]
-        else:
-            self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir,
-                etag=etag, size=size, last_modified=lastmodified)
-            
-    def clear_metadata_cache(self) -> None:
-        self._metadata_cache.clear()
+                _ = retrieve_cached_data(str(parent))
 
 S3Client.S3Path = S3Client.CloudPath  # type: ignore
+
+
+def kill_cache():
+    cache_manager = S3SelfDestructingClientCache()
+    cache_manager.cache = {}
+
+def cache_data(path, is_file_or_path, last_modified, size, etag):
+    cache_manager = S3SelfDestructingClientCache()
+    cache_manager.cache_values(path, is_file_or_path, last_modified, size, etag)
+
+def retrieve_cached_data(path, destroy=True):
+    cache_manager = S3SelfDestructingClientCache()
+    return cache_manager.read_cached(path, destroy)
+
+
+class S3SelfDestructingClientCache:
+
+    cache = {}
+
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(S3SelfDestructingClientCache, cls).__new__(cls)
+        return cls.instance
+    
+
+    def cache_values(self, path, is_file_or_path, last_modified, size, etag):
+        self.cache[path] = S3MetadataCache(is_file_or_path, last_modified, size, etag)
+    
+    def read_cached(self, path, destroy = True):
+        if not destroy:
+            return self.cache.get(path, None)
+        else:
+            return self.cache.pop(path, None)
+        
+
+class S3MetadataCache:
+    def __init__(self, is_file_or_path, last_modified, size, etag):
+        self.is_file_or_path = is_file_or_path
+        self.last_modified=last_modified
+        self.size = size
+        self.etag = etag
+
+
+    def as_dict(self):
+        return {
+            "last_modified": self.last_modified,
+            "size": self.size,
+            "etag": self.etag,
+            "content_type": None,
+            "extra": None,
+        }
