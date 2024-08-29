@@ -146,7 +146,7 @@ class S3Client(Client):
             if k in self._extra_args
         }
         
-        self._metadata_cache: MutableMapping[S3Path, PathMetadata] = WeakKeyDictionary()
+        self._metadata_cache: MutableMapping[S3Path, PathMetadata] = dict()
 
         super().__init__(
             local_cache_dir=local_cache_dir,
@@ -399,10 +399,10 @@ class S3Client(Client):
         return cloud_path
     
     def _set_metadata_cache(self, cloud_path: S3Path, is_file_or_dir: Optional[str], 
-                            etag: Optional[str], size: Optional[int], lastmodified: Optional[str]) -> None:
+                            etag: Optional[str], size: Optional[int], last_modified: Optional[str]) -> None:
         if is_file_or_dir is None:
             self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir,
-                etag=etag, size=size, last_modified=lastmodified)
+                etag=etag, size=size, last_modified=last_modified)
             # If a file/dir is now known to not exist, its parent directories may no longer exist
             # either, since cloud directories only exist if they have a file in them. Since their
             # state is no longer known we remove them from the cache.
@@ -411,7 +411,7 @@ class S3Client(Client):
                     del self._metadata_cache[parent]
         else:
             self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir,
-                etag=etag, size=size, last_modified=lastmodified)
+                etag=etag, size=size, last_modified=last_modified)
             
     def clear_metadata_cache(self) -> None:
         self._metadata_cache.clear()
