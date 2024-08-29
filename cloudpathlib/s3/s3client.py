@@ -33,6 +33,9 @@ except ModuleNotFoundError:
 @dataclasses.dataclass
 class PathMetadata:
     is_file_or_dir: Optional[str]
+    etag: Optional[str]
+    size: Optional[int]
+    last_modified: Optional[str]
 
 
 @register_client_class("s3")
@@ -153,17 +156,29 @@ class S3Client(Client):
 
     def _get_metadata(self, cloud_path: S3Path) -> Dict[str, Any]:
         # get accepts all download extra args
-        data = self.s3.ObjectSummary(cloud_path.bucket, cloud_path.key).get(
-            **self.boto3_dl_extra_args
-        )
-        self._set_metadata_cache(cloud_path, "file")
-        return {
-            "last_modified": data["LastModified"],
-            "size": data["ContentLength"],
-            "etag": data["ETag"],
-            "content_type": data.get("ContentType", None),
-            "extra": data["Metadata"],
-        }
+        results = None
+        path = f"s3://{cloud_path.bucket}/{cloud_path.key}"
+        size = self._metadata_cache[cloud_path].size
+        if size:
+            return {
+                "last_modified": self._metadata_cache[cloud_path].lastmodified,
+                "size": size,
+                "etag": self._metadata_cache[cloud_path].etag,
+                "content_type": None,
+                "extra": None,
+            } 
+        else:
+            data = self.s3.ObjectSummary(cloud_path.bucket, cloud_path.key).get(
+                **self.boto3_dl_extra_args
+            )
+            self._set_metadata_cache(path, "file", data["ETag"], data["ContentLength"], data["LastModified"])
+            return {
+                "last_modified": data["LastModified"],
+                "size": data["ContentLength"],
+                "etag": data["ETag"],
+                "content_type": data.get("ContentType", None),
+                "extra": data["Metadata"],
+            }
 
     def _download_file(self, cloud_path: S3Path, local_path: Union[str, os.PathLike]) -> Path:
         local_path = Path(local_path)
@@ -267,11 +282,14 @@ class S3Client(Client):
             for result_key in result.get("Contents", []):
                 # yield all the parents of any key that have not been yielded already
                 o_relative_path = result_key.get("Key")[len(prefix) :]
+                etag = result_key.get("ETag")
+                size = result_key.get("Size")
+                last_modified = result_key.get("LastModified")
                 for parent in PurePosixPath(o_relative_path).parents:
                     parent_canonical = prefix + str(parent).rstrip("/")
                     if parent_canonical not in yielded_dirs and str(parent) != ".":
                         path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
-                        self._set_metadata_cache(path, "dir")
+                        self._set_metadata_cache(path, "dir", etag, size, last_modified)
                         yield (
                             path, 
                             True,
@@ -286,7 +304,7 @@ class S3Client(Client):
                 # s3 fake directories have 0 size and end with "/"
                 if result_key.get("Key").endswith("/") and result_key.get("Size") == 0:
                     path = self.CloudPath(f"s3://{cloud_path.bucket}/{canonical}")
-                    self._set_metadata_cache(path, "file")
+                    self._set_metadata_cache(path, "dir", etag, size, last_modified)
                     yield (
                         path,
                         True,
@@ -295,6 +313,7 @@ class S3Client(Client):
 
                 # yield object as file
                 else:
+                    self._set_metadata_cache(path, "file", etag, size, last_modified)
                     yield (
                         self.CloudPath(f"s3://{cloud_path.bucket}/{result_key.get('Key')}"),
                         False,
@@ -391,7 +410,7 @@ class S3Client(Client):
                     del self._metadata_cache[parent]
         else:
             self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir)
-
+            
     def clear_metadata_cache(self) -> None:
         self._metadata_cache.clear()
 
