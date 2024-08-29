@@ -157,7 +157,6 @@ class S3Client(Client):
     def _get_metadata(self, cloud_path: S3Path) -> Dict[str, Any]:
         # get accepts all download extra args
         size = None
-        path = f"s3://{cloud_path.bucket}/{cloud_path.key}"
         size = self._metadata_cache[cloud_path].size
         if size:
             return {
@@ -171,7 +170,7 @@ class S3Client(Client):
             data = self.s3.ObjectSummary(cloud_path.bucket, cloud_path.key).get(
                 **self.boto3_dl_extra_args
             )
-            self._set_metadata_cache(path, "file", data["ETag"], data["ContentLength"], data["LastModified"])
+            self._set_metadata_cache(cloud_path, "file", data["ETag"], data["ContentLength"], data["LastModified"])
             return {
                 "last_modified": data["LastModified"],
                 "size": data["ContentLength"],
@@ -289,7 +288,7 @@ class S3Client(Client):
                     parent_canonical = prefix + str(parent).rstrip("/")
                     if parent_canonical not in yielded_dirs and str(parent) != ".":
                         path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
-                        self._set_metadata_cache(path, "dir", etag, size, last_modified)
+                        self._set_metadata_cache(cloud_path, "dir", etag, size, last_modified)
                         yield (
                             path, 
                             True,
@@ -304,7 +303,7 @@ class S3Client(Client):
                 # s3 fake directories have 0 size and end with "/"
                 if result_key.get("Key").endswith("/") and result_key.get("Size") == 0:
                     path = self.CloudPath(f"s3://{cloud_path.bucket}/{canonical}")
-                    self._set_metadata_cache(path, "dir", etag, size, last_modified)
+                    self._set_metadata_cache(cloud_path, "dir", etag, size, last_modified)
                     yield (
                         path,
                         True,
@@ -314,7 +313,7 @@ class S3Client(Client):
                 # yield object as file
                 else:
                     path = self.CloudPath(f"s3://{cloud_path.bucket}/{result_key.get('Key')}")
-                    self._set_metadata_cache(path, "file", etag, size, last_modified)
+                    self._set_metadata_cache(cloud_path, "file", etag, size, last_modified)
                     yield (
                         path,
                         False,
