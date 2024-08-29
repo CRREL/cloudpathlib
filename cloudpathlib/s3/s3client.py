@@ -156,11 +156,10 @@ class S3Client(Client):
 
     def _get_metadata(self, cloud_path: S3Path) -> Dict[str, Any]:
         # get accepts all download extra args
-        size = None
-        size = self._metadata_cache[cloud_path].size
+        size = None if not self._metadata_cache.get(cloud_path) else self._metadata_cache[cloud_path].size
         if size:
             return {
-                "last_modified": self._metadata_cache[cloud_path].lastmodified,
+                "last_modified": self._metadata_cache[cloud_path].last_modified,
                 "size": size,
                 "etag": self._metadata_cache[cloud_path].etag,
                 "content_type": None,
