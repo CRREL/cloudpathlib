@@ -288,7 +288,7 @@ class S3Client(Client):
                     parent_canonical = prefix + str(parent).rstrip("/")
                     if parent_canonical not in yielded_dirs and str(parent) != ".":
                         path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
-                        self._set_metadata_cache(cloud_path, "dir", etag, size, last_modified)
+                        self._set_metadata_cache(path, "dir", etag, size, last_modified)
                         yield (
                             path, 
                             True,
@@ -303,7 +303,7 @@ class S3Client(Client):
                 # s3 fake directories have 0 size and end with "/"
                 if result_key.get("Key").endswith("/") and result_key.get("Size") == 0:
                     path = self.CloudPath(f"s3://{cloud_path.bucket}/{canonical}")
-                    self._set_metadata_cache(cloud_path, "dir", etag, size, last_modified)
+                    self._set_metadata_cache(path, "dir", etag, size, last_modified)
                     yield (
                         path,
                         True,
@@ -313,7 +313,7 @@ class S3Client(Client):
                 # yield object as file
                 else:
                     path = self.CloudPath(f"s3://{cloud_path.bucket}/{result_key.get('Key')}")
-                    self._set_metadata_cache(cloud_path, "file", etag, size, last_modified)
+                    self._set_metadata_cache(path, "file", etag, size, last_modified)
                     yield (
                         path,
                         False,
