@@ -156,7 +156,7 @@ class S3Client(Client):
 
     def _get_metadata(self, cloud_path: S3Path) -> Dict[str, Any]:
         # get accepts all download extra args
-        results = None
+        size = None
         path = f"s3://{cloud_path.bucket}/{cloud_path.key}"
         size = self._metadata_cache[cloud_path].size
         if size:
@@ -313,9 +313,10 @@ class S3Client(Client):
 
                 # yield object as file
                 else:
+                    path = self.CloudPath(f"s3://{cloud_path.bucket}/{result_key.get('Key')}")
                     self._set_metadata_cache(path, "file", etag, size, last_modified)
                     yield (
-                        self.CloudPath(f"s3://{cloud_path.bucket}/{result_key.get('Key')}"),
+                        path,
                         False,
                     )
 
