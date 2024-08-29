@@ -340,14 +340,14 @@ class S3Client(Client):
             )
 
             if remove_src:
-                self._set_metadata_cache(src, None)
+                self._set_metadata_cache(src, None, None, None, None)
                 self._remove(src)
         return dst
 
     def _remove(self, cloud_path: S3Path, missing_ok: bool = True) -> None:
         file_or_dir = self._is_file_or_dir(cloud_path=cloud_path)
         if file_or_dir == "file":
-            self._set_metadata_cache(cloud_path, None)
+            self._set_metadata_cache(cloud_path, None, None, None, None)
             resp = self.s3.Object(cloud_path.bucket, cloud_path.key).delete(
                 **self.boto3_list_extra_args
             )
@@ -372,7 +372,7 @@ class S3Client(Client):
                 path for path, is_dir in self._list_dir(cloud_path, recursive=True) if not is_dir
             ]
             for path in files:
-                self._set_metadata_cache(path, None)
+                self._set_metadata_cache(path, None, None, None, None)
             
             if resp[0].get("ResponseMetadata").get("HTTPStatusCode") not in (204, 200):
                 raise CloudPathException(
@@ -400,9 +400,11 @@ class S3Client(Client):
         obj.upload_file(str(local_path), Config=self.boto3_transfer_config, ExtraArgs=extra_args)
         return cloud_path
     
-    def _set_metadata_cache(self, cloud_path: S3Path, is_file_or_dir: Optional[str]) -> None:
+    def _set_metadata_cache(self, cloud_path: S3Path, is_file_or_dir: Optional[str], 
+                            etag: Optional[str], size: Optional[int], lastmodified: Optional[str]) -> None:
         if is_file_or_dir is None:
-            self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir)
+            self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir,
+                etag=etag, size=size, last_modified=lastmodified)
             # If a file/dir is now known to not exist, its parent directories may no longer exist
             # either, since cloud directories only exist if they have a file in them. Since their
             # state is no longer known we remove them from the cache.
@@ -410,7 +412,8 @@ class S3Client(Client):
                 if parent in self._metadata_cache:
                     del self._metadata_cache[parent]
         else:
-            self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir)
+            self._metadata_cache[cloud_path] = PathMetadata(is_file_or_dir=is_file_or_dir,
+                etag=etag, size=size, last_modified=lastmodified)
             
     def clear_metadata_cache(self) -> None:
         self._metadata_cache.clear()
