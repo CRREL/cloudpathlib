@@ -2,7 +2,17 @@ import dataclasses
 import mimetypes
 import os
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Optional,
+    TYPE_CHECKING,
+    Tuple,
+    Union,
+    MutableMapping,
+)
 
 from weakref import WeakKeyDictionary
 
@@ -27,6 +37,7 @@ class PathMetadata:
     etag: Optional[str]
     size: Optional[int]
     last_modified: Optional[str]
+
 @register_client_class("s3")
 class S3Client(Client):
     """Client class for AWS S3 which handles authentication with AWS for [`S3Path`](../s3path/)
@@ -134,6 +145,8 @@ class S3Client(Client):
             for k in ["RequestPayer", "ExpectedBucketOwner"]
             if k in self._extra_args
         }
+        
+        self._metadata_cache: MutableMapping[S3Path, PathMetadata] = dict()
 
         super().__init__(
             local_cache_dir=local_cache_dir,
@@ -164,7 +177,6 @@ class S3Client(Client):
                 "content_type": data.get("ContentType", None),
                 "extra": data["Metadata"],
             }
-
 
     def _download_file(self, cloud_path: S3Path, local_path: Union[str, os.PathLike]) -> Path:
         local_path = Path(local_path)
@@ -275,6 +287,7 @@ class S3Client(Client):
                     parent_canonical = prefix + str(parent).rstrip("/")
                     path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
                     if parent_canonical not in yielded_dirs and str(parent) != ".":
+                        path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
                         self._set_metadata_cache(path, "dir", etag, size, last_modified)
                         yield (
                             path, 
@@ -289,6 +302,7 @@ class S3Client(Client):
 
                 # s3 fake directories have 0 size and end with "/"
                 if result_key.get("Key").endswith("/") and result_key.get("Size") == 0:
+                    path = self.CloudPath(f"s3://{cloud_path.bucket}/{canonical}")
                     self._set_metadata_cache(path, "dir", etag, size, last_modified)
                     yield (
                         path,
@@ -325,6 +339,7 @@ class S3Client(Client):
             )
 
             if remove_src:
+                self._set_metadata_cache(src, None, None, None, None)
                 self._remove(src)
         return dst
 
@@ -351,6 +366,7 @@ class S3Client(Client):
             resp = bucket.objects.filter(Prefix=prefix, **self.boto3_list_extra_args).delete(
                 **self.boto3_list_extra_args
             )
+            
             files = [
                 path for path, is_dir in self._list_dir(cloud_path, recursive=True) if not is_dir
             ]
@@ -382,7 +398,7 @@ class S3Client(Client):
 
         obj.upload_file(str(local_path), Config=self.boto3_transfer_config, ExtraArgs=extra_args)
         return cloud_path
-
+    
     def _set_metadata_cache(self, cloud_path: S3Path, is_file_or_dir: Optional[str], 
                             etag: Optional[str], size: Optional[int], last_modified: Optional[str]) -> None:
         if is_file_or_dir is None:
