@@ -9,7 +9,6 @@ from pathlib import (  # type: ignore
     PosixPath,
     PurePosixPath,
     WindowsPath,
-    _PathParents,
 )
 
 import shutil
@@ -35,6 +34,8 @@ from typing import (
 from urllib.parse import urlparse
 from warnings import warn
 
+from glob import _Globber
+
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
@@ -44,15 +45,15 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-if sys.version_info >= (3, 12):
-    from pathlib import posixpath as _posix_flavour  # type: ignore[attr-defined]
-    from pathlib import _make_selector  # type: ignore[attr-defined]
-else:
-    from pathlib import _posix_flavour  # type: ignore[attr-defined]
-    from pathlib import _make_selector as _make_selector_pathlib  # type: ignore[attr-defined]
 
-    def _make_selector(pattern_parts, _flavour, case_sensitive=True):
-        return _make_selector_pathlib(tuple(pattern_parts), _flavour)
+
+
+# if sys.version_info >= (3, 12): # type: ignore[attr-defined]
+#     from pathlib import _make_selector  # type: ignore[attr-defined]
+# else:
+#     from pathlib import _posix_flavour  # type: ignore[attr-defined]
+#     from pathlib import _make_selector as _make_selector_pathlib  # type: ignore[attr-defined]
+
 
 
 from cloudpathlib.enums import FileCacheMode
@@ -467,9 +468,9 @@ class CloudPath(metaclass=CloudPathMeta):
         self._glob_checks(pattern)
 
         pattern_parts = PurePosixPath(pattern).parts
-        selector = _make_selector(
-            tuple(pattern_parts), _posix_flavour, case_sensitive=case_sensitive
-        )
+        
+        globber = _Globber(PurePosixPath().parser.sep, case_sensitive=case_sensitive)
+        selector = globber.selector( tuple(pattern_parts) )
 
         yield from self._glob(
             selector,
@@ -485,7 +486,7 @@ class CloudPath(metaclass=CloudPathMeta):
 
         pattern_parts = PurePosixPath(pattern).parts
         selector = _make_selector(
-            ("**",) + tuple(pattern_parts), _posix_flavour, case_sensitive=case_sensitive
+            ("**",) + tuple(pattern_parts), PurePosixPath(pattern).parser, case_sensitive=case_sensitive
         )
 
         yield from self._glob(selector, True)
@@ -718,7 +719,7 @@ class CloudPath(metaclass=CloudPathMeta):
             and isinstance(path_version[0], PurePosixPath)
         ):
             sequence_class = (
-                type(path_version) if not isinstance(path_version, _PathParents) else tuple
+                type(path_version) if not isinstance(path_version, self.parents) else tuple
             )
             return sequence_class(  # type: ignore
                 self._new_cloudpath(_resolve(p)) for p in path_version if _resolve(p) != p.root
