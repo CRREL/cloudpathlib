@@ -37,6 +37,7 @@ class PathMetadata:
     size: Optional[int]
     last_modified: Optional[str]
 
+
 @register_client_class("s3")
 class S3Client(Client):
     """Client class for AWS S3 which handles authentication with AWS for [`S3Path`](../s3path/)
