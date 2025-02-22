@@ -541,6 +541,9 @@ class CloudPath(metaclass=CloudPathMeta):
         force_overwrite_to_cloud: Optional[bool] = None,
         closefd: Optional[bool] = True,
         opener: Optional[str] = None,
+        ignore_ext: Optional[bool] = False,
+        compression: Optional[str] = None,
+        api_kwargs: dict = None, 
     ):
         """
         Open S3Path as a file-liked object.

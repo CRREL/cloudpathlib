@@ -13,8 +13,6 @@ from typing import (
     Union,
     MutableMapping,
 )
-
-
 from weakref import WeakKeyDictionary
 
 from ..client import Client, register_client_class
