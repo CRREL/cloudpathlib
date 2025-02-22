@@ -536,12 +536,11 @@ class CloudPath(metaclass=CloudPathMeta):
         buffering: int = -1,
         encoding: Optional[str] = None,
         errors: Optional[str] = None,
-        newline: Optional[str] = None,# extra kwarg not in pathlib
-        closefd=True,
-        opener=None,
-        ignore_ext=False,
-        compression=None,
-        api_kwargs: dict = None,  # type: ignore
+        newline: Optional[str] = None,
+        force_overwrite_from_cloud: Optional[bool] = None,
+        force_overwrite_to_cloud: Optional[bool] = None,
+        closefd: Optional[bool] = True,
+        opener: Optional[str] = None,
     ):
         """
         Open S3Path as a file-liked object.

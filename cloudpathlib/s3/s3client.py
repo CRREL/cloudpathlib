@@ -14,6 +14,7 @@ from typing import (
     MutableMapping,
 )
 
+
 from weakref import WeakKeyDictionary
 
 from ..client import Client, register_client_class
