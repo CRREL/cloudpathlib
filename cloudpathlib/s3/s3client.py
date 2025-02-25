@@ -285,6 +285,7 @@ class S3Client(Client):
                 last_modified = result_key.get("LastModified")
                 for parent in PurePosixPath(o_relative_path).parents:
                     parent_canonical = prefix + str(parent).rstrip("/")
+                    path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
                     if parent_canonical not in yielded_dirs and str(parent) != ".":
                         path = self.CloudPath(f"s3://{cloud_path.bucket}/{parent_canonical}")
                         self._set_metadata_cache(path, "dir", etag, size, last_modified)

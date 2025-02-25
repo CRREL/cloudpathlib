@@ -43,6 +43,16 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+if sys.version_info >= (3, 12):
+    from pathlib import posixpath as _posix_flavour  # type: ignore[attr-defined]
+    from pathlib import _make_selector  # type: ignore[attr-defined]
+else:
+    from pathlib import _posix_flavour  # type: ignore[attr-defined]
+    from pathlib import _make_selector as _make_selector_pathlib  # type: ignore[attr-defined]
+
+    def _make_selector(pattern_parts, _flavour, case_sensitive=True):
+        return _make_selector_pathlib(tuple(pattern_parts), _flavour)
+
 
 if sys.version_info >= (3, 12):
     from pathlib import posixpath as _posix_flavour  # type: ignore[attr-defined]
@@ -75,10 +85,8 @@ from .exceptions import (
     OverwriteNewerLocalError,
 )
 
-
 if TYPE_CHECKING:
     from .client import Client
-
 
 class CloudImplementation:
     name: str
