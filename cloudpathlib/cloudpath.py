@@ -272,6 +272,11 @@ class CloudPath(metaclass=CloudPathMeta):
 
     @overload
     @classmethod
+    def is_valid_cloudpath(cls, path: "CloudPath", raise_on_error: bool = ...) -> TypeGuard[Self]:
+        ...
+
+    @overload
+    @classmethod
     def is_valid_cloudpath(cls, path: str, raise_on_error: bool = ...) -> bool:
         ...
 
