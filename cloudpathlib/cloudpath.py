@@ -45,24 +45,15 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-
-if sys.version_info < (3, 12):
-    from pathlib import _posix_flavour  # type: ignore[attr-defined] # noqa: F811
-    from pathlib import _make_selector as _make_selector_pathlib  # type: ignore[attr-defined] # noqa: F811
-    from pathlib import _PathParents  # type: ignore[attr-defined]
-
-    def _make_selector(pattern_parts, _flavour, case_sensitive=True):  # noqa: F811
-        return _make_selector_pathlib(tuple(pattern_parts), _flavour)
-
-elif sys.version_info[:2] == (3, 12):
-    from pathlib import _PathParents  # type: ignore[attr-defined]
+if sys.version_info >= (3, 12):
     from pathlib import posixpath as _posix_flavour  # type: ignore[attr-defined]
     from pathlib import _make_selector  # type: ignore[attr-defined]
-elif sys.version_info >= (3, 13):
-    from pathlib._local import _PathParents
-    import posixpath as _posix_flavour  # type: ignore[attr-defined]   # noqa: F811
+else:
+    from pathlib import _posix_flavour  # type: ignore[attr-defined]
+    from pathlib import _make_selector as _make_selector_pathlib  # type: ignore[attr-defined]
 
-    from .legacy.glob import _make_selector  # noqa: F811
+    def _make_selector(pattern_parts, _flavour, case_sensitive=True):
+        return _make_selector_pathlib(tuple(pattern_parts), _flavour)
 
 from cloudpathlib.enums import FileCacheMode
 
@@ -122,7 +113,6 @@ implementation_registry: Dict[str, CloudImplementation] = defaultdict(CloudImple
 
 T = TypeVar("T")
 CloudPathT = TypeVar("CloudPathT", bound="CloudPath")
-
 
 def register_path_class(key: str) -> Callable[[Type[CloudPathT]], Type[CloudPathT]]:
     def decorator(cls: Type[CloudPathT]) -> Type[CloudPathT]:
