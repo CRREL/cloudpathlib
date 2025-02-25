@@ -39,7 +39,6 @@ if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
     from typing_extensions import TypeGuard
-
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -270,11 +269,6 @@ class CloudPath(metaclass=CloudPathMeta):
     @property
     def _no_prefix_no_drive(self) -> str:
         return self._str[len(self.cloud_prefix) + len(self.drive) :]
-
-    @overload
-    @classmethod
-    def is_valid_cloudpath(cls, path: "CloudPath", raise_on_error: bool = ...) -> TypeGuard[Self]:
-        ...
 
     @overload
     @classmethod
