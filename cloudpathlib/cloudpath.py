@@ -9,7 +9,6 @@ from pathlib import (  # type: ignore
     PosixPath,
     PurePosixPath,
     WindowsPath,
-    _PathParents,
 )
 
 import shutil
